@@ -1,0 +1,51 @@
+name: cardinyoli
+description: Joc de la botifarra
+
+# Prevent accidental publishing to pub.dev.
+publish_to: "none"
+
+version: 1.0.0
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  async: ^2.11.0
+  audioplayers: ^6.0.0
+  go_router: ^17.0.0
+  logging: ^1.2.0
+  provider: ^6.1.2
+  shared_preferences: ^2.2.3
+  firebase_core: ^4.1.0
+  flutter_img: ^0.2.1
+  cloud_firestore: ^6.0.1
+  intl: ^0.20.0
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.14.4
+  test: ^1.24.3
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/cards/
+    - assets/cards/catalan/
+    - assets/cards/poker/
+    - assets/icons/
+    - lib/l10n/translations_en.json
+    - lib/l10n/translations_ca.json
+
+flutter_launcher_icons:
+  android: true
+  image_path: "assets/icons/cardinyoli.png"
+  adaptive_icon_foreground: "assets/icons/cardinyoli.png"
+  adaptive_icon_background: "#FFFFFF"

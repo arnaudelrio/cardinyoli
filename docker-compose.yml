@@ -1,0 +1,21 @@
+services:
+  web:
+    image: ghcr.io/cirruslabs/flutter:latest
+    ports:
+      - 8000:8000
+    volumes:
+      - .:/home/development
+    stdin_open: true
+    tty: true
+    command: /bin/bash -c 'cd /home/development && flutter pub get && flutter run -d web-server --web-port=8000'
+    restart: unless-stopped
+  apk:
+    image: ghcr.io/cirruslabs/flutter:latest
+    volumes:
+      - .:/home/development
+    command: /bin/bash -c 'cd /home/development && ./build.sh'
+  doc:
+    image: ghcr.io/cirruslabs/flutter:latest
+    volumes:
+      - .:/home/development
+    command: /bin/bash -c 'cd /home/development && dart pub get && dart doc .'
