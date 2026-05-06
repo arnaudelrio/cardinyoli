@@ -61,9 +61,6 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
   // Global guard so we don't open multiple dialogs on top of each other.
   bool _isDialogOpen = false;
 
-  // Tracks the passive card preview shown while the user chooses a suit.
-  bool _isSuitPreviewOpen = false;
-
   @override
   Widget build(BuildContext context) {
     final palette = context.watch<Palette>();
@@ -574,83 +571,6 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
     }
   }
 
-  Future<void> _showSuitSelectionCardsPreview(List<PlayingCard> hand, Palette palette) async {
-    try {
-      if (!mounted) return;
-
-      _isSuitPreviewOpen = true;
-
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        barrierColor: Colors.black54,
-        builder: (BuildContext dialogContext) {
-          return Align(
-            alignment: Alignment.bottomCenter,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520, maxHeight: 220),
-                  child: Dialog(
-                    backgroundColor: palette.backgroundMain,
-                    insetPadding: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            context.cardsSection,
-                            style: TextStyle(
-                              color: palette.ink,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            height: 132,
-                            child: IgnorePointer(
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: hand
-                                      .map(
-                                        (card) => Padding(
-                                          padding: const EdgeInsets.only(right: 8),
-                                          child: PlayingCardWidget.multiplayer(
-                                            card: card,
-                                            isPlayable: false,
-                                            customWidth: 44,
-                                            customHeight: 62,
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    } catch (e) {
-      _log.fine('Error while showing suit cards preview: $e');
-    } finally {
-      _isSuitPreviewOpen = false;
-    }
-  }
-
   Widget _buildGameSuitPreviewCard(GameSuit gameSuit, Palette palette) {
     final cardSuit = switch (gameSuit) {
       GameSuit.clubs => CardSuit.clubs,
@@ -706,9 +626,6 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
           _gameRoomController?.setGameSuit(userSession.username, suit);
 
           final navigator = Navigator.of(dialogContext, rootNavigator: true);
-          if (_isSuitPreviewOpen && navigator.canPop()) {
-            navigator.pop();
-          }
           if (navigator.canPop()) {
             navigator.pop();
           }
