@@ -441,7 +441,7 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
                               Center(
                                 child: SizedBox(
                                   width: 620,
-                                  height: 152,
+                                  height: 188,
                                   child: GridView.builder(
                                     physics: const NeverScrollableScrollPhysics(),
                                     padding: EdgeInsets.zero,
@@ -449,7 +449,7 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
                                       crossAxisCount: 6,
                                       mainAxisSpacing: 8,
                                       crossAxisSpacing: 8,
-                                      childAspectRatio: 0.74,
+                                      childAspectRatio: 0.68,
                                     ),
                                     itemCount: currentPlayerHand.length,
                                     itemBuilder: (context, index) {
@@ -457,8 +457,8 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
                                         child: PlayingCardWidget.multiplayer(
                                           card: currentPlayerHand[index],
                                           isPlayable: false,
-                                          customWidth: 42,
-                                          customHeight: 60,
+                                          customWidth: 56,
+                                          customHeight: 80,
                                         ),
                                       );
                                     },
@@ -813,7 +813,7 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
                               Center(
                                 child: SizedBox(
                                   width: 620,
-                                  height: 152,
+                                  height: 188,
                                   child: GridView.builder(
                                     physics: const NeverScrollableScrollPhysics(),
                                     padding: EdgeInsets.zero,
@@ -821,7 +821,7 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
                                       crossAxisCount: 6,
                                       mainAxisSpacing: 8,
                                       crossAxisSpacing: 8,
-                                      childAspectRatio: 0.74,
+                                      childAspectRatio: 0.68,
                                     ),
                                     itemCount: currentPlayerHand.length,
                                     itemBuilder: (context, index) {
@@ -829,8 +829,8 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
                                         child: PlayingCardWidget.multiplayer(
                                           card: currentPlayerHand[index],
                                           isPlayable: false,
-                                          customWidth: 42,
-                                          customHeight: 60,
+                                          customWidth: 56,
+                                          customHeight: 80,
                                         ),
                                       );
                                     },

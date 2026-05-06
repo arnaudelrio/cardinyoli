@@ -361,7 +361,8 @@ class GameRoomController {
   /// Set game ID to join
   void setGameId(String? gameId) {
     debugPrint('Setting game ID to $gameId');
-    _gameIdToJoin = gameId ?? String.fromCharCodes(List.generate(6, (index) => Random().nextInt(26) + 97));
+    _gameIdToJoin = gameId != null && gameId.isNotEmpty ? gameId : String.fromCharCodes(List.generate(6, (index) => Random().nextInt(26) + 97));
+    debugPrint('Game ID set to $_gameIdToJoin');
   }
 
   /// Get available games for a specific game ID
