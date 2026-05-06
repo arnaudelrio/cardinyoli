@@ -259,8 +259,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        var r = Random();
-                        value = String.fromCharCodes(List.generate(6, (index) => r.nextInt(33) + 89));
                         return null;
                       }
                       if (value.trim().length > 30) {

@@ -7,5 +7,8 @@ if flutter build apk --dart-define-from-file=.env -v --release; then
   cp build/app/outputs/flutter-apk/app-release.apk ./cardinyoli.apk
   date
   echo "Application copied successfully!"
+else
+  echo "Build failed!"
+  exit 1
 fi
 # flutter clean

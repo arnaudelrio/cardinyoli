@@ -59,6 +59,7 @@ class MultiplayerGameState extends ChangeNotifier {
   GameStatus _status;
   List<GamePlayer> _players;
   List<PlayingCard> _trick; // Cards played in current trick
+  List<(int, PlayingCard)> _previousTrick; // Cards played in previous trick
   int _currentPlayerIndex;
   int _dealerIndex;
   String? _gameMaster; // Player ID who manages game logic (last to join)
@@ -83,6 +84,7 @@ class MultiplayerGameState extends ChangeNotifier {
     GameStatus status = GameStatus.waiting,
     List<GamePlayer>? players,
     List<PlayingCard>? trick,
+    List<(int, PlayingCard)>? previousTrick,
     int currentPlayerIndex = 0,
     int dealerIndex = 0,
     String? gameMaster,
@@ -101,6 +103,7 @@ class MultiplayerGameState extends ChangeNotifier {
   })  : _status = status,
         _players = players ?? [],
         _trick = trick ?? [],
+        _previousTrick = previousTrick ?? [],
         _currentPlayerIndex = currentPlayerIndex,
         _dealerIndex = dealerIndex,
         _gameMaster = gameMaster,
@@ -120,6 +123,7 @@ class MultiplayerGameState extends ChangeNotifier {
   GameStatus get status => _status;
   List<GamePlayer> get players => List.unmodifiable(_players);
   List<PlayingCard> get trick => List.unmodifiable(_trick);
+  List<(int, PlayingCard)> get previousTrick => List.unmodifiable(_previousTrick);
   int get currentPlayerIndex => _currentPlayerIndex;
   int get dealerIndex => _dealerIndex;
   String? get gameMaster => _gameMaster;
@@ -231,6 +235,7 @@ class MultiplayerGameState extends ChangeNotifier {
     _gameMode = GameMode.normal;
     _dealCards(); // This now sets _currentPlayerIndex based on 5 of spades
     _trick.clear();
+    _previousTrick.clear();
     _trickNumber = 0;
 
     // Don't set turn master here - it will be set after bidding completes
@@ -369,6 +374,7 @@ class MultiplayerGameState extends ChangeNotifier {
     _trickSuit = null;
     _trickNumber = 0;
     _trick.clear();
+    _previousTrick.clear();
     _winnerInfo = null;
 
     // Deal fresh cards without re-running 5-of-spades logic
@@ -558,7 +564,7 @@ class MultiplayerGameState extends ChangeNotifier {
         debugPrint('Team winning, can play any card from the trick suit');
         return true;
       }
-      if (winningCard != null && _couldWinTheTrick(currentPlayerCards, winningCard)) {
+      if (winningCard != null && (_couldWinTheTrick(currentPlayerCards, winningCard) || isTeamWinning)) {
         if (_isBetterCard(card, winningCard)) {
           debugPrint('Card is better than winning card, can play');
           return true;
@@ -567,7 +573,7 @@ class MultiplayerGameState extends ChangeNotifier {
           return false;
         }
       }
-      debugPrint('Can play any card from the suit because winning is impossible');
+      debugPrint('Can play any card from the suit because winning is impossible or team already winning.');
       return true;
     }
     debugPrint('Must play a card from the trick suit');
@@ -609,16 +615,16 @@ class MultiplayerGameState extends ChangeNotifier {
     if (_trick.isNotEmpty && _trick.length == 1) {
       _trickSuit = _trick.first.suit;
     }
-    
+
     // If trick is complete (all players played), handle trick end
     if (_trick.length >= _players.length) {
       _handleTrickEnd();
-    
+
       // Check if game is finished (no more cards)
       if (_players.where((e) => e.hand.isNotEmpty).isEmpty) {
         _handleGameEnd();
       }
-      
+
       return;
     }
   }
@@ -637,6 +643,11 @@ class MultiplayerGameState extends ChangeNotifier {
     addScoreByIndex(winnerIndex, points);
 
     debugPrint('Trick winner: ${trickWinner.username}, Current scores: $_tempScores');
+
+    _previousTrick.clear();
+    for (int i = 0; i < _trick.length; i++) {
+      _previousTrick.add(((i + _currentPlayerIndex) % _players.length, _trick[i]));
+    }
 
     // Clear trick and start next one
     _trick.clear();
@@ -673,14 +684,14 @@ class MultiplayerGameState extends ChangeNotifier {
     debugPrint('Game ending. Final scores: $_tempScores');
 
     _status = GameStatus.finished;
-    
+
     final mult = (_gameSuit == GameSuit.botifarra ? 1 : 0) + switch (_gameMode) {
       GameMode.contra => 1,
       GameMode.recontra => 2,
       GameMode.santVicenc => 3,
       _ => 0,
     };
-    
+
     _tempScores = Score.calculate(
       [_tempScores.team1Score, _tempScores.team2Score],
       mult,
@@ -707,6 +718,7 @@ class MultiplayerGameState extends ChangeNotifier {
     _players = (json['players'] as List?)?.map((playerJson) => GamePlayer.fromJson(playerJson as Map<String, dynamic>)).toList() ?? [];
 
     _trick = (json['trick'] as List?)?.map((cardJson) => PlayingCard.fromJson(cardJson as Map<String, dynamic>)).toList() ?? [];
+    _previousTrick = (json['previousTrick'] as List?)?.map((item) => ((item as Map<String, dynamic>)['playerIndex'] as int? ?? 0, PlayingCard.fromJson((item as Map<String, dynamic>)['card'] as Map<String, dynamic>))).toList() ?? [];
 
     _currentPlayerIndex = json['currentPlayerIndex'] as int? ?? 0;
     _dealerIndex = json['dealerIndex'] as int? ?? 0;
@@ -755,6 +767,7 @@ class MultiplayerGameState extends ChangeNotifier {
       'status': _status.toString().split('.').last,
       'players': _players.map((player) => player.toJson()).toList(),
       'trick': _trick.map((card) => card.toJson()).toList(),
+      'previousTrick': _previousTrick.map((item) => {'playerIndex': item.$1, 'card': item.$2.toJson()}).toList(),
       'currentPlayerIndex': _currentPlayerIndex,
       'dealerIndex': _dealerIndex,
       'gameMaster': _gameMaster,

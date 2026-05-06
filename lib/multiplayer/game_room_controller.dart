@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
@@ -10,14 +11,13 @@ import '../game_internals/playing_card.dart';
 class GameRoomController {
   static const int maxPlayersPerGame = 4;
   static const String gamesCollection = 'games';
-  static const String defaultGameId = '';
   static const String highscoresCollection = 'highscores';
 
   MultiplayerGameState? _gameState;
   StreamSubscription<DocumentSnapshot>? _gameSubscription;
   String? _currentGameId;
   String? _currentUsername;
-  String _gameIdToJoin = defaultGameId;
+  String _gameIdToJoin = '';
 
   FirebaseFirestore get _firestore => FirebaseFirestore.instance;
 
@@ -38,7 +38,7 @@ class GameRoomController {
   Future<MultiplayerGameState> joinOrCreateGame(String username, {String? gameId}) async {
     debugPrint('Joining or creating game: $gameId, player: $username');
     _currentUsername = username;
-    _gameIdToJoin = gameId ?? defaultGameId;
+    setGameId(gameId);
 
     try {
       // Try to find an available game with the specified ID
@@ -359,9 +359,9 @@ class GameRoomController {
   }
 
   /// Set game ID to join
-  void setGameId(String gameId) {
+  void setGameId(String? gameId) {
     debugPrint('Setting game ID to $gameId');
-    _gameIdToJoin = gameId.isEmpty ? defaultGameId : gameId;
+    _gameIdToJoin = gameId ?? String.fromCharCodes(List.generate(6, (index) => Random().nextInt(26) + 97));
   }
 
   /// Get available games for a specific game ID

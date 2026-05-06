@@ -97,6 +97,8 @@ extension AppLocalizations on BuildContext {
   String get somethingWentWrong => _t('somethingWentWrong');
   String get changeName => _t('changeName');
   String get close => _t('close');
+  String get previousTrickTitle => _t('previousTrickTitle');
+  String get showPreviousTrick => _t('showPreviousTrick');
   String get thisCardCannotBePlayed => _t('thisCardCannotBePlayed');
   String get notYourTurn => _t('notYourTurn');
   String get trickArea => _t('trickArea');
@@ -123,11 +125,13 @@ extension AppLocalizations on BuildContext {
   String get sardanes => _t('sardanes');
   String get bastoners => _t('bastoners');
   String get delegate => _t('delegate');
+  String get cards => _t('cards');
   String get bidding => _t('bidding');
   String get doYouWantTo => _t('doYouWantTo');
   String get contra => _t('contra');
   String get recontra => _t('recontra');
   String get santVicenc => _t('santVicenc');
+  String get chosen => _t('chosen');
   String get thisWillIncreaseStakes => _t('thisWillIncreaseStakes');
   String get pass => _t('pass');
   String get activeGameFound => _t('activeGameFound');

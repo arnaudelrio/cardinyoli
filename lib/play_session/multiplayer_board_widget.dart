@@ -275,51 +275,208 @@ class _MultiplayerBoardWidgetState extends State<MultiplayerBoardWidget> {
         builder: (context, candidateData, rejectedData) {
           final isHighlighted = candidateData.isNotEmpty;
 
-          return Container(
-            decoration: BoxDecoration(
-              color: isHighlighted ? palette.backgroundMain.withOpacity(0.9) : palette.backgroundMain.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isHighlighted ? Colors.green : palette.ink.withOpacity(0.3),
-                width: isHighlighted ? 3 : 1,
+          return Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: isHighlighted ? palette.backgroundMain.withOpacity(0.9) : palette.backgroundMain.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isHighlighted ? Colors.green : palette.ink.withOpacity(0.3),
+                    width: isHighlighted ? 3 : 1,
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: gameState.trick.isNotEmpty
+                      ? _buildTrickCards(gameState.trick)
+                      : gameState.previousTrick.isNotEmpty
+                          ? _buildTrickCards(gameState.previousTrick.map((entry) => entry.$2).toList())
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.crop_square,
+                                  size: 48,
+                                  color: palette.ink.withOpacity(0.3),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  context.trickArea,
+                                  style: TextStyle(
+                                    color: palette.ink.withOpacity(0.5),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  gameRoomController.isCurrentPlayerTurn() ? context.dropCardsHere : context.waitYourTurn,
+                                  style: TextStyle(
+                                    color: palette.ink.withOpacity(0.4),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                ),
               ),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-            child: SizedBox(
-              width: double.infinity,
-              child: gameState.trick.isEmpty
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.crop_square,
-                          size: 48,
-                          color: palette.ink.withOpacity(0.3),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          context.trickArea,
-                          style: TextStyle(
-                            color: palette.ink.withOpacity(0.5),
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          gameRoomController.isCurrentPlayerTurn() ? context.dropCardsHere : context.waitYourTurn,
-                          style: TextStyle(
-                            color: palette.ink.withOpacity(0.4),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    )
-                  : _buildTrickCards(gameState.trick),
-            ),
+              if (gameState.previousTrick.isNotEmpty)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: IconButton.filledTonal(
+                      tooltip: context.showPreviousTrick,
+                      icon: const Icon(Icons.history),
+                      onPressed: () => _showPreviousTrickDialog(gameState, palette),
+                    ),
+                  ),
+                ),
+            ],
           );
         },
       ),
+    );
+  }
+
+  Future<void> _showPreviousTrickDialog(MultiplayerGameState gameState, Palette palette) async {
+    final previousTrick = gameState.previousTrick;
+    if (previousTrick.isEmpty) return;
+
+    final isPoker = context.read<SettingsController>().usePokerCards.value;
+
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: palette.backgroundMain,
+          title: Text(
+            context.previousTrickTitle,
+            style: TextStyle(color: palette.ink, fontWeight: FontWeight.bold),
+          ),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 220,
+                  child: Stack(
+                    children: previousTrick.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final (playerIndex, card) = entry.value;
+                      final playerName = playerIndex >= 0 && playerIndex < gameState.players.length
+                          ? gameState.players[playerIndex].username
+                          : context.defaultPlayerName;
+
+                      Widget cardSlot;
+                      switch (index) {
+                        case 0:
+                          cardSlot = Positioned(
+                            bottom: 8,
+                            left: 0,
+                            right: 0,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(playerName, style: TextStyle(color: palette.ink, fontSize: 12)),
+                                const SizedBox(height: 4),
+                                Center(
+                                  child: PlayingCardWidget.multiplayer(
+                                    card: card,
+                                    isPlayable: false,
+                                    customWidth: 52,
+                                    customHeight: 74,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                          break;
+                        case 1:
+                          cardSlot = Positioned(
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(playerName, style: TextStyle(color: palette.ink, fontSize: 12)),
+                                const SizedBox(height: 4),
+                                PlayingCardWidget.multiplayer(
+                                  card: card,
+                                  isPlayable: false,
+                                  customWidth: 52,
+                                  customHeight: 74,
+                                ),
+                              ],
+                            ),
+                          );
+                          break;
+                        case 2:
+                          cardSlot = Positioned(
+                            top: 8,
+                            left: 0,
+                            right: 0,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                PlayingCardWidget.multiplayer(
+                                  card: card,
+                                  isPlayable: false,
+                                  customWidth: 52,
+                                  customHeight: 74,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(playerName, style: TextStyle(color: palette.ink, fontSize: 12)),
+                              ],
+                            ),
+                          );
+                          break;
+                        case 3:
+                          cardSlot = Positioned(
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(playerName, style: TextStyle(color: palette.ink, fontSize: 12)),
+                                const SizedBox(height: 4),
+                                PlayingCardWidget.multiplayer(
+                                  card: card,
+                                  isPlayable: false,
+                                  customWidth: 52,
+                                  customHeight: 74,
+                                ),
+                              ],
+                            ),
+                          );
+                          break;
+                        default:
+                          cardSlot = const SizedBox.shrink();
+                      }
+
+                      return cardSlot;
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(context.close, style: TextStyle(color: palette.ink)),
+            ),
+          ],
+        );
+      },
     );
   }
 

@@ -7,8 +7,11 @@ import 'package:provider/provider.dart';
 
 import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
+import '../play_session/playing_card_widget.dart';
+import '../game_internals/card_suit.dart';
 import '../game_internals/game_suit.dart';
 import '../game_internals/multiplayer_game_state.dart';
+import '../game_internals/playing_card.dart';
 import '../game_internals/score.dart';
 import '../l10n/app_localizations.dart';
 import '../login/user_session.dart';
@@ -57,6 +60,9 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
 
   // Global guard so we don't open multiple dialogs on top of each other.
   bool _isDialogOpen = false;
+
+  // Tracks the passive card preview shown while the user chooses a suit.
+  bool _isSuitPreviewOpen = false;
 
   @override
   Widget build(BuildContext context) {
@@ -395,80 +401,164 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
 
       final palette = context.read<Palette>();
       final isPoker = context.read<SettingsController>().pokerCards;
+      final currentPlayerHand = gs.players
+          .firstWhere((player) => player.username == currentUser)
+          .hand;
 
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
+        barrierColor: Colors.black54,
         builder: (BuildContext dialogContext) {
-          return AlertDialog(
-            backgroundColor: palette.backgroundMain,
-            title: Text(
-              context.chooseGameSuit,
-              style: TextStyle(color: palette.ink, fontWeight: FontWeight.bold),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildSuitButton(
-                    dialogContext,
-                    GameSuit.clubs,
-                    isPoker
-                        ? const Text('♣', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black))
-                        : Image.asset('assets/icons/castellers.jpg', width: 32, height: 44, fit: BoxFit.contain),
-                    isPoker ? context.clubs : context.castellers,
-                    palette,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildSuitButton(
-                    dialogContext,
-                    GameSuit.diamonds,
-                    isPoker
-                        ? const Text('♦', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.red))
-                        : Image.asset('assets/icons/diables.jpg', width: 32, height: 44, fit: BoxFit.contain),
-                    isPoker ? context.diamonds : context.diables,
-                    palette,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildSuitButton(
-                    dialogContext,
-                    GameSuit.hearts,
-                    isPoker
-                        ? const Text('♥', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.red))
-                        : Image.asset('assets/icons/sardanes.jpg', width: 32, height: 44, fit: BoxFit.contain),
-                    isPoker ? context.hearts : context.sardanes,
-                    palette,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildSuitButton(
-                    dialogContext,
-                    GameSuit.spades,
-                    isPoker
-                        ? const Text('♠', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black))
-                        : Image.asset('assets/icons/bastoners.jpg', width: 32, height: 44, fit: BoxFit.contain),
-                    isPoker ? context.spades : context.bastoners,
-                    palette,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildSuitButton(
-                    dialogContext,
-                    GameSuit.botifarra,
-                    const Text('🃏', style: TextStyle(fontSize: 26)),
-                    context.botifarra,
-                    palette,
-                  ),
-                  if (!(gs.gameSuit == GameSuit.delegate)) ...[
-                    const SizedBox(height: 10),
-                    _buildSuitButton(
-                      dialogContext,
-                      GameSuit.delegate,
-                      const Icon(Icons.arrow_forward, size: 24),
-                      context.delegate,
-                      palette,
+          return SafeArea(
+            child: Stack(
+              children: [
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: Card(
+                        elevation: 10,
+                        color: palette.backgroundMain.withOpacity(0.98),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                context.cards,
+                                style: TextStyle(
+                                  color: palette.ink,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Center(
+                                child: SizedBox(
+                                  width: 620,
+                                  height: 152,
+                                  child: GridView.builder(
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    padding: EdgeInsets.zero,
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 6,
+                                      mainAxisSpacing: 8,
+                                      crossAxisSpacing: 8,
+                                      childAspectRatio: 0.74,
+                                    ),
+                                    itemCount: currentPlayerHand.length,
+                                    itemBuilder: (context, index) {
+                                      return Center(
+                                        child: PlayingCardWidget.multiplayer(
+                                          card: currentPlayerHand[index],
+                                          isPlayable: false,
+                                          customWidth: 42,
+                                          customHeight: 60,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                  ],
-                ],
-              ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 236),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 520),
+                      child: Card(
+                        elevation: 12,
+                        color: palette.backgroundMain,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  context.chooseGameSuit,
+                                  style: TextStyle(color: palette.ink, fontWeight: FontWeight.bold, fontSize: 18),
+                                ),
+                                const SizedBox(height: 12),
+                                _buildSuitButton(
+                                  dialogContext,
+                                  GameSuit.clubs,
+                                  isPoker
+                                      ? const Text('♣', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black))
+                                      : Image.asset('assets/icons/castellers.jpg', width: 32, height: 44, fit: BoxFit.contain),
+                                  isPoker ? context.clubs : context.castellers,
+                                  palette,
+                                ),
+                                const SizedBox(height: 10),
+                                _buildSuitButton(
+                                  dialogContext,
+                                  GameSuit.diamonds,
+                                  isPoker
+                                      ? const Text('♦', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.red))
+                                      : Image.asset('assets/icons/diables.jpg', width: 32, height: 44, fit: BoxFit.contain),
+                                  isPoker ? context.diamonds : context.diables,
+                                  palette,
+                                ),
+                                const SizedBox(height: 10),
+                                _buildSuitButton(
+                                  dialogContext,
+                                  GameSuit.hearts,
+                                  isPoker
+                                      ? const Text('♥', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.red))
+                                      : Image.asset('assets/icons/sardanes.jpg', width: 32, height: 44, fit: BoxFit.contain),
+                                  isPoker ? context.hearts : context.sardanes,
+                                  palette,
+                                ),
+                                const SizedBox(height: 10),
+                                _buildSuitButton(
+                                  dialogContext,
+                                  GameSuit.spades,
+                                  isPoker
+                                      ? const Text('♠', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black))
+                                      : Image.asset('assets/icons/bastoners.jpg', width: 32, height: 44, fit: BoxFit.contain),
+                                  isPoker ? context.spades : context.bastoners,
+                                  palette,
+                                ),
+                                const SizedBox(height: 10),
+                                _buildSuitButton(
+                                  dialogContext,
+                                  GameSuit.botifarra,
+                                  const Text('🃏', style: TextStyle(fontSize: 26)),
+                                  context.botifarra,
+                                  palette,
+                                ),
+                                if (!(gs.gameSuit == GameSuit.delegate)) ...[
+                                  const SizedBox(height: 10),
+                                  _buildSuitButton(
+                                    dialogContext,
+                                    GameSuit.delegate,
+                                    const Icon(Icons.arrow_forward, size: 24),
+                                    context.delegate,
+                                    palette,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         },
@@ -482,6 +572,164 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
     } finally {
       _isDialogOpen = false;
     }
+  }
+
+  Future<void> _showSuitSelectionCardsPreview(List<PlayingCard> hand, Palette palette) async {
+    try {
+      if (!mounted) return;
+
+      _isSuitPreviewOpen = true;
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.black54,
+        builder: (BuildContext dialogContext) {
+          return Align(
+            alignment: Alignment.bottomCenter,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520, maxHeight: 220),
+                  child: Dialog(
+                    backgroundColor: palette.backgroundMain,
+                    insetPadding: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.cardsSection,
+                            style: TextStyle(
+                              color: palette.ink,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 132,
+                            child: IgnorePointer(
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: hand
+                                      .map(
+                                        (card) => Padding(
+                                          padding: const EdgeInsets.only(right: 8),
+                                          child: PlayingCardWidget.multiplayer(
+                                            card: card,
+                                            isPlayable: false,
+                                            customWidth: 44,
+                                            customHeight: 62,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      _log.fine('Error while showing suit cards preview: $e');
+    } finally {
+      _isSuitPreviewOpen = false;
+    }
+  }
+
+  Widget _buildGameSuitPreviewCard(GameSuit gameSuit, Palette palette) {
+    final cardSuit = switch (gameSuit) {
+      GameSuit.clubs => CardSuit.clubs,
+      GameSuit.diamonds => CardSuit.diamonds,
+      GameSuit.hearts => CardSuit.hearts,
+      GameSuit.spades => CardSuit.spades,
+      _ => CardSuit.clubs,
+    };
+
+    final isPoker = context.read<SettingsController>().pokerCards;
+
+    final label = context.chosen + ' ' + switch (gameSuit) {
+        GameSuit.clubs => isPoker ? context.clubs : context.castellers,
+        GameSuit.diamonds => isPoker ? context.diamonds : context.diables,
+        GameSuit.hearts => isPoker ? context.hearts : context.sardanes,
+        GameSuit.spades => isPoker ? context.spades : context.bastoners,
+        GameSuit.botifarra => context.botifarra,
+        GameSuit.delegate => context.delegate,
+        GameSuit.none => context.gameSuit,
+      };
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: palette.ink,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        PlayingCardWidget.multiplayer(
+          card: PlayingCard(cardSuit, 1),
+          isPlayable: false,
+          customWidth: 50,
+          customHeight: 70,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSuitButton(BuildContext dialogContext, GameSuit suit, Widget icon, String label, Palette palette) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: suit.color == GameSuitColor.red ? Colors.red.shade100 : Colors.grey.shade200,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        ),
+        onPressed: () {
+          final userSession = context.read<UserSession>();
+          _gameRoomController?.setGameSuit(userSession.username, suit);
+
+          final navigator = Navigator.of(dialogContext, rootNavigator: true);
+          if (_isSuitPreviewOpen && navigator.canPop()) {
+            navigator.pop();
+          }
+          if (navigator.canPop()) {
+            navigator.pop();
+          }
+        },
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            SizedBox(width: 40, child: Center(child: icon)),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                color: suit.color == GameSuitColor.red ? Colors.red.shade900 : Colors.black,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Centralized helper to show the bidding dialog exactly once per bidder/round.
@@ -501,6 +749,9 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
       if (gs.roundNumber == _lastShownBiddingRound && gs.biddingPlayerIndex == _lastShownBiddingPlayerIndex) {
         return;
       }
+      final currentPlayerHand = gs.players
+                .firstWhere((player) => player.username == currentUser)
+                .hand;
 
       _isDialogOpen = true;
 
@@ -527,54 +778,143 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
+        barrierColor: Colors.black54,
         builder: (BuildContext dialogContext) {
-          return AlertDialog(
-            backgroundColor: palette.backgroundMain,
-            title: Text(
-              context.bidding,
-              style: TextStyle(color: palette.ink, fontWeight: FontWeight.bold),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
+          final gameSuitCard = _buildGameSuitPreviewCard(gs.gameSuit, palette);
+
+          return SafeArea(
+            child: Stack(
               children: [
-                Text(
-                  '${context.doYouWantTo} $bidAction?',
-                  style: TextStyle(color: palette.ink, fontSize: 16),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: Card(
+                        elevation: 10,
+                        color: palette.backgroundMain.withOpacity(0.98),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                context.cards,
+                                style: TextStyle(
+                                  color: palette.ink,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Center(
+                                child: SizedBox(
+                                  width: 620,
+                                  height: 152,
+                                  child: GridView.builder(
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    padding: EdgeInsets.zero,
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 6,
+                                      mainAxisSpacing: 8,
+                                      crossAxisSpacing: 8,
+                                      childAspectRatio: 0.74,
+                                    ),
+                                    itemCount: currentPlayerHand.length,
+                                    itemBuilder: (context, index) {
+                                      return Center(
+                                        child: PlayingCardWidget.multiplayer(
+                                          card: currentPlayerHand[index],
+                                          isPlayable: false,
+                                          customWidth: 42,
+                                          customHeight: 60,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Center(child: gameSuitCard),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  context.thisWillIncreaseStakes,
-                  style: TextStyle(color: palette.ink.withValues(alpha: 0.7), fontSize: 14),
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 236),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 520),
+                      child: Card(
+                        elevation: 12,
+                        color: palette.backgroundMain,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  context.bidding,
+                                  style: TextStyle(color: palette.ink, fontWeight: FontWeight.bold, fontSize: 18),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${context.doYouWantTo} $bidAction?',
+                                  style: TextStyle(color: palette.ink, fontSize: 16),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  context.thisWillIncreaseStakes,
+                                  style: TextStyle(color: palette.ink.withValues(alpha: 0.7), fontSize: 14),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 12),
+                                TextButton(
+                                  onPressed: () {
+                                    final userSession = context.read<UserSession>();
+                                    _gameRoomController?.makeBid(userSession.username, false);
+                                    Navigator.of(dialogContext, rootNavigator: true).pop();
+                                  },
+                                  child: Text(
+                                    context.pass,
+                                    style: TextStyle(color: palette.ink.withValues(alpha: 0.7)),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                  onPressed: () {
+                                    final userSession = context.read<UserSession>();
+                                    _gameRoomController?.makeBid(userSession.username, true);
+                                    Navigator.of(dialogContext, rootNavigator: true).pop();
+                                  },
+                                  child: Text(
+                                    bidAction,
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  final userSession = context.read<UserSession>();
-                  _gameRoomController?.makeBid(userSession.username, false);
-                  Navigator.of(dialogContext).pop();
-                },
-                child: Text(
-                  context.pass,
-                  style: TextStyle(color: palette.ink.withValues(alpha: 0.7)),
-                ),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                ),
-                onPressed: () {
-                  final userSession = context.read<UserSession>();
-                  _gameRoomController?.makeBid(userSession.username, true);
-                  Navigator.of(dialogContext).pop();
-                },
-                child: Text(
-                  bidAction,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
           );
         },
       );
@@ -697,204 +1037,5 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
         }
       }
     }
-  }
-
-  void _showSuitSelectionDialog(bool hideDelegate) {
-    // This method remains for compatibility with other codepaths - prefer
-    // using `_tryShowSuitSelection` which prevents duplicates. This method
-    // will show an unconditional dialog (but still will be prevented by the
-    // global _isDialogOpen guard if it was called while a different dialog is open).
-    final palette = context.read<Palette>();
-    final isPoker = context.read<SettingsController>().pokerCards;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          backgroundColor: palette.backgroundMain,
-          title: Text(
-            context.chooseGameSuit,
-            style: TextStyle(color: palette.ink, fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildSuitButton(
-                  dialogContext,
-                  GameSuit.clubs,
-                  isPoker
-                      ? const Text('♣', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black))
-                      : Image.asset('assets/icons/castellers.jpg', width: 32, height: 44, fit: BoxFit.contain),
-                  isPoker ? context.clubs : context.castellers,
-                  palette,
-                ),
-                const SizedBox(height: 10),
-                _buildSuitButton(
-                  dialogContext,
-                  GameSuit.diamonds,
-                  isPoker
-                      ? const Text('♦', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.red))
-                      : Image.asset('assets/icons/diables.jpg', width: 32, height: 44, fit: BoxFit.contain),
-                  isPoker ? context.diamonds : context.diables,
-                  palette,
-                ),
-                const SizedBox(height: 10),
-                _buildSuitButton(
-                  dialogContext,
-                  GameSuit.hearts,
-                  isPoker
-                      ? const Text('♥', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.red))
-                      : Image.asset('assets/icons/sardanes.jpg', width: 32, height: 44, fit: BoxFit.contain),
-                  isPoker ? context.hearts : context.sardanes,
-                  palette,
-                ),
-                const SizedBox(height: 10),
-                _buildSuitButton(
-                  dialogContext,
-                  GameSuit.spades,
-                  isPoker
-                      ? const Text('♠', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black))
-                      : Image.asset('assets/icons/bastoners.jpg', width: 32, height: 44, fit: BoxFit.contain),
-                  isPoker ? context.spades : context.bastoners,
-                  palette,
-                ),
-                const SizedBox(height: 10),
-                _buildSuitButton(
-                  dialogContext,
-                  GameSuit.botifarra,
-                  const Text('🃏', style: TextStyle(fontSize: 26)),
-                  context.botifarra,
-                  palette,
-                ),
-                if (!hideDelegate) ...[
-                  const SizedBox(height: 10),
-                  _buildSuitButton(
-                    dialogContext,
-                    GameSuit.delegate,
-                    const Icon(Icons.arrow_forward, size: 24),
-                    context.delegate,
-                    palette,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSuitButton(BuildContext dialogContext, GameSuit suit, Widget icon, String label, Palette palette) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: suit.color == GameSuitColor.red ? Colors.red.shade100 : Colors.grey.shade200,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        ),
-        onPressed: () {
-          final userSession = context.read<UserSession>();
-          _gameRoomController?.setGameSuit(userSession.username, suit);
-          Navigator.of(dialogContext).pop();
-        },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            SizedBox(width: 40, child: Center(child: icon)),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                color: suit.color == GameSuitColor.red ? Colors.red.shade900 : Colors.black,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showBiddingDialog(GameMode currentMode) {
-    // This method remains for compatibility with other codepaths - prefer
-    // using `_tryShowBidding` which prevents duplicates. This method will show
-    // an unconditional dialog (but still will be prevented by the global
-    // _isDialogOpen guard if it was called while a different dialog is open).
-    final palette = context.read<Palette>();
-
-    // Determine what the next bid would be
-    String bidAction;
-    switch (currentMode) {
-      case GameMode.normal:
-        bidAction = context.contra;
-        break;
-      case GameMode.contra:
-        bidAction = context.recontra;
-        break;
-      case GameMode.recontra:
-        bidAction = context.santVicenc;
-        break;
-      case GameMode.santVicenc:
-        // Should never reach here, but just in case
-        return;
-    }
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          backgroundColor: palette.backgroundMain,
-          title: Text(
-            context.bidding,
-            style: TextStyle(color: palette.ink, fontWeight: FontWeight.bold),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${context.doYouWantTo} $bidAction?',
-                style: TextStyle(color: palette.ink, fontSize: 16),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                context.thisWillIncreaseStakes,
-                style: TextStyle(color: palette.ink.withValues(alpha: 0.7), fontSize: 14),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                final userSession = context.read<UserSession>();
-                _gameRoomController?.makeBid(userSession.username, false);
-                Navigator.of(dialogContext).pop();
-              },
-              child: Text(
-                context.pass,
-                style: TextStyle(color: palette.ink.withValues(alpha: 0.7)),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-              ),
-              onPressed: () {
-                final userSession = context.read<UserSession>();
-                _gameRoomController?.makeBid(userSession.username, true);
-                Navigator.of(dialogContext).pop();
-              },
-              child: Text(
-                bidAction,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        );
-      },
-    );
   }
 }
