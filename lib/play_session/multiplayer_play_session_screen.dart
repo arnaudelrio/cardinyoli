@@ -46,8 +46,8 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
   GameRoomController? _gameRoomController;
   StreamSubscription<MultiplayerGameState>? _gameStateSubscription;
 
-  // Prevent duplicate celebration navigation for the same round.
-  int _celebratedRound = -1;
+  // Prevent duplicate celebration navigation for the same finished round.
+  int _lastFinishedRound = -1;
 
   // Prevent duplicate dialogs:
   // Track last round and chooser index for suit selection shown.
@@ -251,9 +251,14 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
       // don't immediately navigate back to the end screen.
       try {
         final gs = _gameRoomController!.gameState;
-        if (gs.status == GameStatus.finished) {
-          _celebratedRound = gs.roundNumber;
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (gs.status == GameStatus.finished) {
+            _lastFinishedRound = gs.roundNumber;
+            if (mounted) {
+              _showGameEndCelebration(gs);
+            }
+          }
+        });
       } catch (_) {
         // gameState throws if no active game; safe to ignore here
       }
@@ -297,9 +302,9 @@ class _MultiplayerPlaySessionScreenState extends State<MultiplayerPlaySessionScr
       (gameState) {
         if (!mounted) return;
 
-        // Check for game end conditions — only trigger once per round
-        if (gameState.status == GameStatus.finished && gameState.roundNumber > _celebratedRound) {
-          _celebratedRound = gameState.roundNumber;
+        // Check for game end conditions — only trigger once per finished round
+        if (gameState.status == GameStatus.finished && gameState.roundNumber > _lastFinishedRound) {
+          _lastFinishedRound = gameState.roundNumber;
           _showGameEndCelebration(gameState);
         }
 

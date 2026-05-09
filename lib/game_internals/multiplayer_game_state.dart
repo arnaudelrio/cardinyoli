@@ -603,7 +603,7 @@ class MultiplayerGameState extends ChangeNotifier {
     if (newCard.suit == _gameSuit) {
       return currentBest.suit != _gameSuit || newCard > currentBest;
     }
-    return newCard.suit == _trickSuit && newCard > currentBest;
+    return (currentBest.suit != _gameSuit && newCard.suit == _trickSuit) && newCard > currentBest;
   }
 
   // Handle turn progression (called by current turn master)

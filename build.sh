@@ -1,5 +1,5 @@
-# flutter clean
-# flutter pub get
+flutter clean
+flutter pub get
 dart run flutter_launcher_icons
 echo "Starting build process..."
 if flutter build apk --dart-define-from-file=.env -v --release; then
@@ -11,4 +11,4 @@ else
   echo "Build failed!"
   exit 1
 fi
-# flutter clean
+flutter clean

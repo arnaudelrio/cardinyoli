@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
 import '../game_internals/card_suit.dart';
-import '../game_internals/player.dart';
 import '../game_internals/playing_card.dart';
 import '../settings/settings.dart';
 
@@ -15,7 +14,6 @@ class PlayingCardWidget extends StatelessWidget {
   static const double height = 88.9;
 
   final PlayingCard? card;
-  final Player? player;
   final bool isPlayable;
   final bool showBack;
   final double? customWidth;
@@ -25,7 +23,6 @@ class PlayingCardWidget extends StatelessWidget {
 
   const PlayingCardWidget({
     this.card,
-    this.player,
     this.isPlayable = true,
     this.showBack = false,
     this.customWidth = 60,
@@ -43,7 +40,7 @@ class PlayingCardWidget extends StatelessWidget {
     this.customHeight = 80,
     this.isRedBack = false,
     super.key,
-  }) : player = null;
+  });
 
   // Constructor for card back
   const PlayingCardWidget.back({
@@ -52,7 +49,6 @@ class PlayingCardWidget extends StatelessWidget {
     this.isRedBack = false,
     super.key,
   })  : card = null,
-        player = null,
         isPlayable = false,
         showBack = true;
 
@@ -141,14 +137,14 @@ class PlayingCardWidget extends StatelessWidget {
         }
 
         /// Cards that aren't in a player's hand are not draggable.
-        if (player == null || !isPlayable) return cardWidget;
+        if (!isPlayable) return cardWidget;
 
         return Draggable(
           feedback: Transform.rotate(
             angle: 0.1,
             child: cardWidget,
           ),
-          data: PlayingCardDragData(card!, player!),
+          data: PlayingCardDragData(card!),
           childWhenDragging: Opacity(
             opacity: 0.5,
             child: cardWidget,
@@ -172,7 +168,5 @@ class PlayingCardWidget extends StatelessWidget {
 class PlayingCardDragData {
   final PlayingCard card;
 
-  final Player holder;
-
-  const PlayingCardDragData(this.card, this.holder);
+  const PlayingCardDragData(this.card);
 }
